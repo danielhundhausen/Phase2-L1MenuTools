@@ -189,10 +189,9 @@ class Skimmer():
         Events not fulfilling L1 hardware quality
         criteria are filtered out.
         """
-        if not self.cfg_plot.test_quality_id(test_obj):
-            return
-
         for test_obj in self.cfg_plot.test_objects:
+            if not self.cfg_plot.test_quality_id(test_obj):
+                return
             quality = Quality(self.ak_arrays, test_obj)
             quality_id = self.cfg_plot.test_quality_id(test_obj)
             selection = ~getattr(quality, quality_id)
