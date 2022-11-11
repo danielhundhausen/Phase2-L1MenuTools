@@ -57,8 +57,7 @@ class EfficiencyPlotter(Plotter):
         Efficiency / turn-on plots.
         """
         fig, ax = self._create_new_plot()
-        xbins = self.turnon_collection.bins
-        xbins = 0.5*(xbins[1:] + xbins[:-1])
+        xbins = self.turnon_collection.bins[:-1] + self.bin_width / 2
 
         err_kwargs = {"xerr": self.turnon_collection.xerr,
                       "capsize": 3, "marker": 'o', "markersize": 8}
@@ -67,6 +66,7 @@ class EfficiencyPlotter(Plotter):
             if obj_key == "ref":
                 continue
             efficiency, yerr = self.turnon_collection.get_efficiency(obj_key)
+
             label = self.cfg["test_objects"][obj_key]["label"]
             ax.errorbar(xbins, efficiency, yerr=yerr, label=label,
                         **err_kwargs)
@@ -84,8 +84,8 @@ class EfficiencyPlotter(Plotter):
         """
         fig, ax = self._create_new_plot()
         gen_hist_ref = self.turnon_collection.hists["ref"]
-        xbins = self.turnon_collection.bins
-        xbins = 0.5*(xbins[1:] + xbins[:-1])
+        xbins = self.turnon_collection.bins[:-1] + self.bin_width / 2
+
         err_kwargs = {"xerr": self.turnon_collection.xerr, "capsize": 1,
                       "marker": 'o', "markersize": 2, "linestyle": "None"}
 
@@ -190,6 +190,7 @@ class ScalingPlotter(Plotter):
             x_points = np.array(list(points.keys()))
             y_points = np.array(list(points.values()))
             pts = ax.plot(x_points, y_points, 'o')
+
             label = (self.cfg_plot["test_objects"][obj]["label"]
                      + ", "
                      + self._params_to_func_str(obj))
@@ -246,15 +247,8 @@ class ScalingCentral():
                                             efficiency,
                                             bins,
                                             threshold):
-
-        xvals = bins
-        xvals = np.array(xvals); efficiency = np.array(efficiency)
-
-        xvals = xvals[~np.isnan(efficiency)]
-        efficiency = efficiency[~np.isnan(efficiency)]
-
-        popt, pcov = curve_fit(utils.tanh, xvals, efficiency)
-
+        xvals = [x - (bins[1] - bins[0]) / 2 for x in bins[1:]]
+        popt, pcov = curve_fit(utils.tanh, xvals, efficiency, p0=[1, 0])
         if np.inf in pcov:
             return None
 
@@ -262,112 +256,20 @@ class ScalingCentral():
 
         return s_val
 
-    def tridiagonal(self, H, K1, K2):
-
-        A = []
-        B = []
-        C = []
-        D = []
-
-        for i in range(len(K1)):
-            A.append(-K2)
-            B.append(K1[i]+2*K2)
-            C.append(-K2)
-
-        A[0] = 0
-        C[-1] = 0
-
-        for i in range(len(K1)):
-            D.append(K1[i]*H[i])
-
-        D[0] = D[0] + K2*0
-        D[-1] = D[-1] + K2*1
-
-        for i in range(1, len(K1)):
-            F = A[i]/B[i-1]
-
-            A[i] = A[i] - B[i-1] * F
-            B[i] = B[i] - C[i-1] * F
-            C[i] = C[i]
-            D[i] = D[i] - D[i-1] * F
-
-        Y = np.ones(len(K1))
-        Y[-1] = D[-1] / B[-1]
-
-        for i in reversed(range(len(K1)-2)):
-            Y[i] = (D[i] - C[i] * Y[i+1])/B[i]
-
-        return Y
-
-    def find_95(self, graph_x, graph_y, Target):
-        L = 0
-        R = 155
-
-        while(R-L > 1e-4):
-            C = (L+R)/2
-            V = self.Eval(C, graph_x, graph_y)
-
-            if(V<Target):
-                L=C
-            else:
-                R = C
-
-        return (R+L)/2.
-
-    def Eval(self, x, graph_x, graph_y):
-
-        if(x < graph_x[0]):
-            return 0
-
-        if(x >= graph_x[len(graph_x)-1]):
-            return 1
-
-        xr = graph_x[0]
-        yr = graph_y[0]
-        for i in range(len(graph_x)-1):
-            xl = xr
-            yl = yr
-            xr = graph_x[i+1]
-            yr = graph_y[i+1]
-            if ( (x < xr) & (x >= xl) ):
-                return yl + (yr - yl) / (xr - xl) * (x - xl)
-
-        return -1
-
     def _compute_scalings_naive(self, turnon_collection, scalings,
                                 scaling_pct):
         bins = turnon_collection.bins
-        bins = 0.5*(bins[1:]+bins[:-1])
         threshold = turnon_collection.threshold
 
         for obj in turnon_collection.hists:
             if obj == "ref":
                 continue
-            efficiency, yerr = turnon_collection.get_efficiency(obj)
-            xbins = bins
-            xbins = xbins[~np.isnan(efficiency)]
-            er_dn = yerr[0]
-            er_up = yerr[1]
-            er_dn = er_dn[~np.isnan(efficiency)]
-            er_up = er_up[~np.isnan(efficiency)]
-            efficiency = efficiency[~np.isnan(efficiency)]
-
-            K1 = []
-            for i in range(len(efficiency)):
-                K1.append(1/(er_dn[i] + er_up[i])/(er_up[i] + er_dn[i]))
-
-            percentage_point = self.find_95(
-                xbins,
-                self.tridiagonal(efficiency,K1, 100),
-                0.95
+            efficiency, _ = turnon_collection.get_efficiency(obj)
+            percentage_point = self._find_percentage_point(
+                efficiency,
+                bins,
+                scaling_pct
             )
-
-            # _percentage_point = self._find_percentage_point(
-            #     efficiency,
-            #     bins,
-            #     scaling_pct
-            # )
-
             if percentage_point:
                 scalings[obj][threshold] = percentage_point
 
@@ -378,13 +280,12 @@ class ScalingCentral():
                                scalings,
                                scaling_pct):
         bins = turnon_collection.bins
-        bins = 0.5*(bins[1:] + bins[:-1])
         threshold = turnon_collection.threshold
 
         for obj in turnon_collection.hists:
             if obj == "ref":
                 continue
-            efficiency, eff_err = turnon_collection.get_efficiency(obj)
+            efficiency, _ = turnon_collection.get_efficiency(obj)
             percentage_point = self._compute_value_of_tanh_at_threshold(
                 efficiency,
                 bins,
