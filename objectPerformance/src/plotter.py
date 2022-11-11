@@ -248,7 +248,7 @@ class ScalingCentral():
                                             bins,
                                             threshold):
         xvals = [x - (bins[1] - bins[0]) / 2 for x in bins[1:]]
-        popt, pcov = curve_fit(utils.tanh, xvals, efficiency, p0=[1,0])
+        popt, pcov = curve_fit(utils.tanh, xvals, efficiency, p0=[1, 0])
         if np.inf in pcov:
             return None
 
@@ -295,7 +295,6 @@ class ScalingCentral():
                 scalings[obj][threshold] = percentage_point
 
         return scalings
-
 
     def _compute_scalings(self, turnon_collection, scalings,
                           scaling_pct, method="tanh") -> dict:
