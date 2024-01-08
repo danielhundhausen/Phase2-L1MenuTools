@@ -14,25 +14,27 @@ from plot_config import PlotConfig
 plt.style.use(hep.style.CMS)
 
 
-class Plotter():
-
-    def _create_new_plot(self):
-        fig, ax = plt.subplots(figsize=(10, 10))
-        hep.cms.label(ax=ax, llabel="Phase-2 Simulation", com=14)
-        return fig, ax
-
-
-class RatePlotter(Plotter):
+class RatePlotter:
 
     def __init__(self, cfg, data):
         self.cfg = cfg
         self.data = data
+        # Common plot properties
+        self._figsize = (10, 10)
+        self._llabel = "Phase-2 Simulation"
+        self._com = 14
 
-    def _style_plot(self, fig, ax, legend_loc="upper right"):
-        ax.legend(loc=legend_loc, frameon=False)
-        ax.set_xlabel(rf"{self.cfg.xlabel}")
-        ax.set_ylabel(rf"{self.cfg.ylabel}")
-        ax.tick_params(direction="in")
+    def _style_plot(self, fig, ax0, ax1=None, legend_loc="upper right"):
+        ax0.legend(loc=legend_loc, frameon=False)
+        ax0.set_ylabel(rf"{self.cfg.ylabel}")
+        ax0.set_yscale("log")
+        ax0.grid()
+        ax0.tick_params(direction="in")
+        if ax1:
+            ax1.set_xlabel(rf"{self.cfg.xlabel}")
+            ax1.grid()
+        else:
+            ax0.set_xlabel(rf"{self.cfg.xlabel}")
         fig.tight_layout()
 
     def _plot_single_version_rate_curves(self):
@@ -40,7 +42,8 @@ class RatePlotter(Plotter):
         TODO: Write description!
         """
         version = self.cfg.versions[0]
-        fig, ax = self._create_new_plot()
+        fig, ax = plt.subplots(figsize=self._figsize)
+        hep.cms.label(ax=ax, llabel=self._llabel, com=self._com)
 
         for obj_key, rate_values in self.data.items():
             rate_values = rate_values[version]  # TODO: This is not ideal. Think of a more elegant way to pass the data.
@@ -53,7 +56,7 @@ class RatePlotter(Plotter):
                     
         self._style_plot(fig, ax)
         for ext in [".png",".pdf"]:
-            plt.savefig(f"outputs/{version}_{self.cfg.plot_name}{ext}")
+            plt.savefig(f"outputs/rate_plots/{version}_{self.cfg.plot_name}{ext}")
 
         # TODO: Add styling
         plt.close()
@@ -63,16 +66,41 @@ class RatePlotter(Plotter):
         TODO: Write description!
         """
         v1, v2 = self.cfg.versions
-        fig, ax = self._create_new_plot()
+        fig, axs = plt.subplots(2, 1, figsize=self._figsize, sharex=True, gridspec_kw={'height_ratios': [3, 1]})
+        hep.cms.label(ax=axs[0], llabel=self._llabel, com=self._com)
 
-        # TODO: Add the actual rate curves
-
-        self._style_plot(fig, ax)
+        for obj_key, rate_values in self.data.items():
+            xvalues = np.fromiter(rate_values[v1].keys(), dtype=float)
+            v1_values = np.fromiter(rate_values[v1].values(), dtype=float)
+            v2_values = np.fromiter(rate_values[v2].values(), dtype=float)
+            p = axs[0].plot(
+               xvalues,
+               v1_values,
+               marker='o',
+               linestyle="solid",
+               label=f"{obj_key} @ {v1}"
+            )
+            axs[0].plot(
+               xvalues,
+               v2_values,
+               marker='o',
+               linestyle="dashed",
+               label=f"{obj_key} @ {v2}",
+               color=p[0].get_color()
+            )
+            axs[1].plot(
+               xvalues,
+               v1_values / v2_values,
+               marker='o',
+               linestyle="dotted",
+               label=f"({obj_key} @ {v1}) / ({obj_key} @ {v2})",
+            )
+            axs[1].axhline(1, alpha=0.6, color="black")
+ 
+        self._style_plot(fig, axs[0], axs[1])
         for ext in [".png",".pdf"]:
             plt.savefig(f"outputs/rate_plots/{v1}-vs-{v2}_{self.cfg.plot_name}{ext}")
 
-        # TODO: Add ratio plot
-        # TODO: Add grouped styling (same color, dashed vs. non-dashed)
         plt.close()
 
     def plot(self):
@@ -101,9 +129,9 @@ class RatePlotCentral:
             # Iterate over thresholds
             for thr in np.logspace(plot_config.x_min, plot_config.x_max, plot_config.n_bins):
                 if v == "V30":  # TODO: Compute actual value
-                    rate_data[v][thr] = 1
+                    rate_data[v][thr] = 3 - thr / 100
                 else:
-                    rate_data[v][thr] = 2
+                    rate_data[v][thr] = 4 - thr / 100
         return rate_data
 
     def run(self):
