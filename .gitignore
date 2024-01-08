@@ -5,6 +5,7 @@
 **/rates.py
 objectPerformance/**/*.root
 objectPerformance/outputs/**/*
+outputs
 rates/table/out/*
 rates/table/cache/**/*
 rates/table/lib/*

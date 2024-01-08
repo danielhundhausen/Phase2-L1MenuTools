@@ -35,29 +35,52 @@ class RatePlotter(Plotter):
         ax.tick_params(direction="in")
         fig.tight_layout()
 
-    def _plot_rate_curve(self):
+    def _plot_single_version_rate_curves(self):
         """
-        TODO!
+        TODO: Write description!
         """
+        version = self.cfg.versions[0]
         fig, ax = self._create_new_plot()
 
         for obj_key, rate_values in self.data.items():
+            rate_values = rate_values[version]  # TODO: This is not ideal. Think of a more elegant way to pass the data.
             ax.plot(
                list(rate_values.keys()),
                list(rate_values.values()),
                marker='o',
-               label=obj_key
+               label=f"{obj_key} @ {version}"
             )
                     
         self._style_plot(fig, ax)
         for ext in [".png",".pdf"]:
-            plt.savefig(f"outputs/{self.cfg.plot_name}{ext}")
+            plt.savefig(f"outputs/{version}_{self.cfg.plot_name}{ext}")
 
+        # TODO: Add styling
+        plt.close()
+
+    def _plot_version_comparsion_rate_curves(self):
+        """
+        TODO: Write description!
+        """
+        v1, v2 = self.cfg.versions
+        fig, ax = self._create_new_plot()
+
+        # TODO: Add the actual rate curves
+
+        self._style_plot(fig, ax)
+        for ext in [".png",".pdf"]:
+            plt.savefig(f"outputs/rate_plots/{v1}-vs-{v2}_{self.cfg.plot_name}{ext}")
+
+        # TODO: Add ratio plot
+        # TODO: Add grouped styling (same color, dashed vs. non-dashed)
         plt.close()
 
     def plot(self):
-        os.makedirs(f"outputs", exist_ok=True)
-        self._plot_rate_curve()
+        os.makedirs(f"outputs/rate_plots", exist_ok=True)
+        if self.cfg.compare_versions:
+            self._plot_version_comparsion_rate_curves()
+        else:
+            self._plot_single_version_rate_curves()
 
 
 class RatePlotCentral:
@@ -77,7 +100,10 @@ class RatePlotCentral:
             rate_data[v] = {}
             # Iterate over thresholds
             for thr in np.logspace(plot_config.x_min, plot_config.x_max, plot_config.n_bins):
-                rate_data[v][thr] = 1  # TODO: Compute actual value
+                if v == "V30":  # TODO: Compute actual value
+                    rate_data[v][thr] = 1
+                else:
+                    rate_data[v][thr] = 2
         return rate_data
 
     def run(self):
