@@ -2,6 +2,7 @@
 import argparse
 import os
 
+import awkward as ak
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
@@ -41,7 +42,7 @@ class RatePlotter:
         """
         TODO: Write description!
         """
-        version = self.cfg.versions[0]
+        version = self.cfg.version
         fig, ax = plt.subplots(figsize=self._figsize)
         hep.cms.label(ax=ax, llabel=self._llabel, com=self._com)
 
@@ -111,6 +112,30 @@ class RatePlotter:
             self._plot_single_version_rate_curves()
 
 
+class RateComputer:
+
+    def __init__(self, obj, obj_cuts, sample, version):
+        self.object = obj
+        self.cuts = obj_cuts
+        self.sample = sample
+        self.version = version
+        self.arrays = self.load_cached_arrays()
+
+    def load_cached_arrays(self):
+        fpath = f"cache/{self.version}/{self.version}_{self.sample}_{self.object}.parquet"
+        arr = ak.from_parquet(fpath)
+        return ak.zip({var.replace(self.object, "").lower(): arr[var] for var in arr.fields})
+
+    def compute_rate(self, thr):
+        # TODO: Add scalings
+        # TODO: Add other criteria like iso, quality
+        mask = self.arrays.pt > 0
+        for cut in self.cuts:
+            mask = mask & eval(cut.replace('{', "self.arrays.").replace('}', ''))
+        mask = mask & (self.arrays.pt >= thr)
+        return ak.sum(ak.any(mask, axis = 1)) / len(self.arrays)
+
+
 class RatePlotCentral:
     """
     Class that orchestrates the plotting of the rate plots
@@ -121,17 +146,17 @@ class RatePlotCentral:
         with open(cfg_plots_path, 'r') as f:
             self.cfg_plots = yaml.safe_load(f)
 
-    def compute_rates(self, plot_config, obj_properties) -> dict:
+    def compute_rates(self, plot_config, obj_name: str, obj_properties) -> dict:
         rate_data = {}
         # Iterate over version(s)
-        for v in plot_config.versions:
-            rate_data[v] = {}
+        for version in plot_config.versions:
+            rate_data[version] = {}
+            rate_computer = RateComputer(
+                obj_name, obj_properties["cuts"], plot_config.sample, version 
+            )
             # Iterate over thresholds
             for thr in np.logspace(plot_config.x_min, plot_config.x_max, plot_config.n_bins):
-                if v == "V30":  # TODO: Compute actual value
-                    rate_data[v][thr] = 3 - thr / 100
-                else:
-                    rate_data[v][thr] = 4 - thr / 100
+                rate_data[version][thr] = rate_computer.compute_rate(thr)
         return rate_data
 
     def run(self):
@@ -143,13 +168,15 @@ class RatePlotCentral:
         """
         # Iterate over plots
         for plot_name, cfg_plot in self.cfg_plots.items():
+            print("Plotting ", plot_name)
             plot_config = PlotConfig(plot_name, cfg_plot)
             rate_plot_data = {}
 
             # Iterate over objects in plot
             for obj_name, obj_properties in plot_config.objects.items():
-                print(obj_name)
-                rate_plot_data[obj_name] = self.compute_rates(plot_config, obj_properties)
+                rate_plot_data[obj_name] = self.compute_rates(
+                    plot_config, obj_name, obj_properties
+                )
 
             # Plot Rate vs. Threshold after all data has been aggregated
             plotter = RatePlotter(plot_config, rate_plot_data)
