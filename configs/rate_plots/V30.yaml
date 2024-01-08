@@ -1,32 +1,21 @@
 ElectronsTriggerBarrel:
   sample: DYLL_M50
+  versions: V30
   objects:
-    V30:
-      EG: 
-        suffix: "Pt"
-        label: "EG"
-        match_dR: 0.2 
-        quality_id: "QUAL_125x_EGID"
-        cuts:
-          - "abs({eta}) < 2.8"
-      tkElectron:
-        suffix: "Pt"
-        label: "tkElectron"
-        match_dR: 0.15
-        cuts:
-          - "{passeseleid} == 1"
-          - "abs({eta}) < 2.8"
-      tkIsoElectron:
-        base_obj: "tkElectron"
-        suffix: "Pt"
-        label: "tkIsoElectron"
-        iso_BB: 0.13
-        iso_EE: 0.28
-        iso_branch: "trkiso"
-        match_dR: 0.15
-        cuts:
-          - "abs({eta}) < 2.8"
-          - "{passeseleid} == 1"
+    EG: 
+      suffix: "Pt"
+      label: "EG"
+      match_dR: 0.2 
+      quality_id: "QUAL_125x_EGID"
+      cuts:
+        - "abs({eta}) < 2.8"
+    tkElectron:
+      suffix: "Pt"
+      label: "tkElectron"
+      match_dR: 0.15
+      cuts:
+        - "{passeseleid} == 1"
+        - "abs({eta}) < 2.8"
   xlabel: "Online $p_T$ [GeV]"
   ylabel: "Rate [kHz]"
   binning:  # is passed to np.logspace 
@@ -36,23 +25,17 @@ ElectronsTriggerBarrel:
 
 ElectronsTriggerBarrelV29vsV30:
   sample: DYLL_M50
+  versions:
+    - V29
+    - V30
   objects:
-    V29:
-      EG: 
-        suffix: "Pt"
-        label: "EG"
-        match_dR: 0.2 
-        quality_id: "QUAL_125x_EGID"
-        cuts:
-          - "abs({eta}) < 2.8"
-    V30:
-      EG: 
-        suffix: "Pt"
-        label: "EG"
-        match_dR: 0.2 
-        quality_id: "QUAL_125x_EGID"
-        cuts:
-          - "abs({eta}) < 2.8"
+    EG: 
+      suffix: "Pt"
+      label: "EG"
+      match_dR: 0.2 
+      quality_id: "QUAL_125x_EGID"
+      cuts:
+        - "abs({eta}) < 2.8"
   xlabel: "Online $p_T$ [GeV]"
   ylabel: "Rate [kHz]"
   binning:  # is passed to np.logspace 
