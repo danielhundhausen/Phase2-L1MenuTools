@@ -47,5 +47,5 @@ class PlotConfig:
 
     @property
     def objects(self):
-        return self._cfg["objects"][self.versions[0]].keys()
+        return self._cfg["objects"][self.versions[0]]
 
