@@ -11,6 +11,7 @@
   1. Apply eta cut
   2. Select obj with highest pt
   3. Check if selected object fulfils isolation, otherwise throw out
+  - Note that step 1. and 2. do not commute
 
 
 ### Choosing the reference object

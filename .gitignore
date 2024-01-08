@@ -9,4 +9,5 @@ objectPerformance/outputs/**/*
 rates/table/out/*
 rates/table/cache/**/*
 rates/table/lib/*
+pyenv
 **/tmp/*
