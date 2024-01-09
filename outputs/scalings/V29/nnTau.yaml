@@ -1,0 +1,11 @@
+nnTau:
+  Barrel:
+    eta_max: 1.5
+    eta_min: 0
+    offset: -2.065
+    slope: 1.899
+  Endcap:
+    eta_max: 2.5
+    eta_min: 1.5
+    offset: 19.596
+    slope: 1.584
