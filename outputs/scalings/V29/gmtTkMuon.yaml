@@ -1,0 +1,16 @@
+gmtTkMuon:
+  Barrel:
+    eta_max: 0.83
+    eta_min: 0
+    offset: 0.986
+    slope: 1.049
+  Endcap:
+    eta_max: 2.5
+    eta_min: 1.24
+    offset: 0.792
+    slope: 1.054
+  Overlap:
+    eta_max: 1.24
+    eta_min: 0.83
+    offset: 1.075
+    slope: 1.052

@@ -1,0 +1,11 @@
+caloTau:
+  Barrel:
+    eta_max: 1.5
+    eta_min: 0
+    offset: -2.553
+    slope: 1.525
+  Endcap:
+    eta_max: 2.5
+    eta_min: 1.5
+    offset: -1.273
+    slope: 1.968

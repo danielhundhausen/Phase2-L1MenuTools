@@ -1,0 +1,6 @@
+phase1PuppiMHT:
+  inclusive:
+    eta_max: 9999
+    eta_min: 0
+    offset: 49.175
+    slope: 1.321

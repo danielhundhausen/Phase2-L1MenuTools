@@ -1,0 +1,11 @@
+tkElectron:
+  Barrel:
+    eta_max: 1.5
+    eta_min: 0
+    offset: 1.441
+    slope: 1.159
+  Endcap:
+    eta_max: 2.5
+    eta_min: 1.5
+    offset: 1.256
+    slope: 1.217
