@@ -1,0 +1,57 @@
+standaloneMuon:
+  sample: DYLL_M50
+  versions: V29
+  objects:
+    - standaloneMuonBarrel
+    - standaloneMuonOverlap
+    - standaloneMuonEndcap
+  binning:
+    min: 0
+    max: 100
+    step: 10
+
+gmtMuon:
+  sample: DYLL_M50
+  versions: V29
+  objects:
+    - gmtMuonBarrel
+    - gmtMuonOverlap
+    - gmtMuonEndcap
+  binning:
+    min: 0
+    max: 100
+    step: 10
+
+ElectronPhoton:
+  sample: DYLL_M50
+  versions: V29
+  objects:
+    - standaloneElectron
+    - tkElectron
+    - tkIsoElectron
+    - tkPhotonIso
+  binning:
+    min: 0
+    max: 100
+    step: 10
+
+
+# TODO: Add the plotd with these objects:
+# 1 : ['trackerJet', 'puppiPhase1Jet', 'seededConePuppiJet', 'caloJet'],
+# #9 : ['trackerJet', 'puppiPhase1Jet', 'seededConePuppiJet'],
+# 2 : ['puppiPhase1JetExt', 'seededConePuppiJetExt', 'caloJetExt'],
+# 10 : ['puppiPhase1JetExt', 'seededConePuppiJetExt'],
+# 3 : ['puppiPhase1HT', 'trackerHT', 'caloHT'],
+# #4 : ['puppiPhase1HT', 'trackerHT'],
+# #5 : ['puppiPhase1MHT', 'trackerMHT'],
+# 6 : ['puppiMET', 'trackerMET'], #'trackerMET_FBE'],
+# 6 : ['trackerMET'],
+# #7 : ['standaloneMuon', 'tkMuon', 'tkMuonStub'],
+# 8 : ['gmtMuon', 'gmtTkMuon'],
+# 11 : ['CaloTau', 'NNPuppiTauLoose'], #, 'NNPuppiTau2vtxLoose'],
+# 12: ['CaloTau','CaloTauBarrel','CaloTauEndcap']
+#15: ['CaloTau','CaloTauBarrel','CaloTauEndcap','NNPuppiTauLoose']
+# 100: ["seededConePuppiJet_Barrel","seededConePuppiJet_Endcap"],
+# 101: ["puppiPhase1Jet_Barrel","puppiPhase1Jet_Endcap"],
+# 102: ["seededConePuppiJet_Barrel","seededConePuppiJet_Endcap","puppiPhase1Jet_Barrel","puppiPhase1Jet_Endcap"],
+#100: ["seededConePuppiJet_Barrel","seededConePuppiJet_Endcap"]
