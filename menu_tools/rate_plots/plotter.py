@@ -1,6 +1,7 @@
 #!/afs/cern.ch/user/d/dhundhau/public/miniconda3/envs/py310/bin/python
 import argparse
 import os
+import warnings
 
 import awkward as ak
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ from progress.bar import IncrementalBar
 import yaml
 import json
 
+from menu_tools.utils import scalings
 from menu_tools.rate_plots.config import RatePlotConfig
 
 plt.style.use(hep.style.CMS)
@@ -21,7 +23,7 @@ class RatePlotter:
     _llabel = "Phase-2 Simulation"
     _com = 14
 
-    def __init__(self, cfg, data, offline_pt: bool = False):
+    def __init__(self, cfg, data, offline_pt: bool):
         self.cfg = cfg
         self.data = data
         self.offline_pt = offline_pt
@@ -66,7 +68,9 @@ class RatePlotter:
 
         self._style_plot(fig, ax)
         for ext in [".png", ".pdf"]:
-            plt.savefig(f"outputs/rate_plots/{version}_{self.cfg.plot_name}{ext}")
+            plt.savefig(
+                f"outputs/rate_plots/{version}_{self._online_offline}_{self.cfg.plot_name}{ext}"
+            )
 
         # TODO: Add styling
         plt.close()
@@ -115,7 +119,9 @@ class RatePlotter:
 
         self._style_plot(fig, axs[0], axs[1])
         for ext in [".png", ".pdf"]:
-            plt.savefig(f"outputs/rate_plots/{v1}-vs-{v2}_{self.cfg.plot_name}{ext}")
+            plt.savefig(
+                f"outputs/rate_plots/{v1}-vs-{v2}_{self._online_offline}_{self.cfg.plot_name}{ext}"
+            )
 
         plt.close()
 
@@ -143,34 +149,40 @@ class RateComputer:
         self.apply_offline_conversion = apply_offline_conversion
         self.arrays = self._load_cached_arrays()
 
-    def _apply_scalings(self):
+    def _apply_scalings(self, arr: ak.Array) -> ak.Array:
         """
         Apply conversion from online pt to offline pt according to linear
         scaling function parametrized by the scalings computed by the
         objectPerformance code.
+        If no file with scaling parameters is found, a warning is printed
+        and the online pt is left unchanged.
         """
-        raise NotImplementedError(
-            "Loading and application of the scalings is not implemented yet"
-        )
+        try:
+            scaling_params = scalings.load_scaling_params(self.object, self.version)
+        except FileNotFoundError:
+            warnings.warn(
+                f"No file was found at `outputs/scalings/{self.version}/{self.object}.yaml`! Setting offline pt = online pt",
+                UserWarning,
+            )
+        return scalings.compute_offline_pt(arr, scaling_params, "pt")
 
     def _load_cached_arrays(self):
         """
         Loads array for specified object/version combination
         from the cached parquet file.
         """
-        fpath = (
-            f"cache/{self.version}/{self.version}_{self.sample}_{self.object}.parquet"
-        )
+        fpath = f"cache/{self.version}/{self.version}_{self.sample}_{self.object}.parquet"  # TODO: unify place of cache folder across submodules
         arr = ak.from_parquet(fpath)
-
-        # Apply scalings if so configured
-        if self.apply_offline_conversion:
-            arr = self._apply_scalings()
 
         # Remove object name prefix from array fields
         arr = ak.zip(
             {var.replace(self.object, "").lower(): arr[var] for var in arr.fields}
         )
+
+        # Apply scalings if so configured
+        if self.apply_offline_conversion:
+            arr["pt"] = self._apply_scalings(arr)
+
         return arr
 
     def compute_rate(self, thr: float) -> float:
@@ -189,13 +201,22 @@ class RateComputer:
 
 class RatePlotCentral:
     """
-    Class that orchestrates the plotting of the rate plots
+    Class that orchestrates the creation of the rate plots
     (pt thresholds vs. rate).
     """
 
     def __init__(self, cfg_plots_path: str):
         with open(cfg_plots_path, "r") as f:
             self.cfg_plots = yaml.safe_load(f)
+
+    def get_bins(self, plot_config: RatePlotConfig) -> np.ndarray:
+        """
+        Set bins according to configuration.
+        """
+        bin_width = plot_config.bin_width
+        xmax = plot_config.xmax + 1e-5
+        xmin = plot_config.xmin
+        return np.arange(xmin, xmax, bin_width)
 
     def _compute_rates(
         self,
@@ -205,7 +226,10 @@ class RatePlotCentral:
         apply_offline_conversion: bool,
     ) -> dict:
         """
-        TODO: Write docstring!
+        This function orchestrates the computations of
+        the rates at the different thresholds that are
+        to be plotted. Instances of RateComputer are created
+        and called for this purpose.
         """
         rate_data: dict[str, dict] = {}
 
@@ -221,9 +245,7 @@ class RatePlotCentral:
             )
 
             # Iterate over thresholds
-            for thr in np.logspace(
-                plot_config.x_min, plot_config.x_max, plot_config.n_bins
-            ):
+            for thr in self.get_bins(plot_config):
                 rate_data[version][thr] = rate_computer.compute_rate(thr)
 
         return rate_data
@@ -248,7 +270,7 @@ class RatePlotCentral:
                 )
 
             # Plot Rate vs. Threshold after all data has been aggregated
-            plotter = RatePlotter(plot_config, rate_plot_data)
+            plotter = RatePlotter(plot_config, rate_plot_data, apply_offline_conversion)
             plotter.plot()
 
 

@@ -12,16 +12,16 @@ class RatePlotConfig:
         return self._cfg["sample"]
 
     @property
-    def n_bins(self):
-        return self._cfg["binning"]["num"]
+    def bin_width(self):
+        return self._cfg["binning"]["step"]
 
     @property
-    def x_min(self):
-        return self._cfg["binning"]["start"]
+    def xmin(self):
+        return self._cfg["binning"]["min"]
 
     @property
-    def x_max(self):
-        return self._cfg["binning"]["stop"]
+    def xmax(self):
+        return self._cfg["binning"]["max"]
 
     @property
     def compare_versions(self):
