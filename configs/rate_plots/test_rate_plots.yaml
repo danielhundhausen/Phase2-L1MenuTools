@@ -15,9 +15,9 @@ ElectronsTriggerBarrel:
         - "{passeseleid} == 1"
         - "abs({eta}) < 2.8"
   binning:  # is passed to np.logspace 
-    start: 0 
-    stop: 2
-    num: 20
+    min: 0
+    max: 100
+    step: 10
 
 ElectronsTriggerBarrelV29vsV30:
   sample: DYLL_M50
@@ -32,6 +32,6 @@ ElectronsTriggerBarrelV29vsV30:
       cuts:
         - "abs({eta}) < 2.8"
   binning:  # is passed to np.logspace 
-    start: 0 
-    stop: 2
-    num: 20
+    min: 0 
+    max: 100
+    step: 10
