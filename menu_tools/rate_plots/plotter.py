@@ -265,6 +265,8 @@ class RatePlotCentral:
 
             # Iterate over objects in plot
             for obj_name, obj_properties in plot_config.objects.items():
+                # TODO: Only iterate over object names and load object
+                # properties from somewhere else, ideally a central place.
                 rate_plot_data[obj_name] = self._compute_rates(
                     plot_config, obj_name, obj_properties, apply_offline_conversion
                 )

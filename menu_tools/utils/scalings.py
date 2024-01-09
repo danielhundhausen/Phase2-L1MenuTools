@@ -27,21 +27,16 @@ def compute_offline_pt(
             "No branch to which to apply the scalings."
             " One of `et`, `pt` or `` must exist to compute offline pt/et."
         )
+    new_pt = ak.zeros_like(pt_orig)
 
-    if "inclusive" in obj_scaling_params:
-        values = obj_scaling_params["inclusive"]
-        new_pt = pt_orig * values["slope"] + values["offset"] * (pt_orig > 0)
-    else:
-        new_pt = ak.zeros_like(pt_orig)
-
-        # loop through eta regions with its scaling parameters
-        for region, values in obj_scaling_params.items():
-            # create eta mask for this eta region
-            eta_mask = (abs(arr.eta) >= values["eta_min"]) & (
-                abs(arr.eta) < values["eta_max"]
-            )
-            # scale pt for non-masked elements of this eta region
-            new_pt = new_pt + eta_mask * (pt_orig * values["slope"] + values["offset"])
+    # loop through eta regions with its scaling parameters
+    for region, values in obj_scaling_params.items():
+        # create eta mask for this eta region
+        eta_mask = (abs(arr.eta) >= values["eta_min"]) & (
+            abs(arr.eta) < values["eta_max"]
+        )
+        # scale pt for non-masked elements of this eta region
+        new_pt = new_pt + eta_mask * (pt_orig * values["slope"] + values["offset"])
 
     return new_pt
 
