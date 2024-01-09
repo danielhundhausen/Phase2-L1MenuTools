@@ -5,19 +5,15 @@ ElectronsTriggerBarrel:
     EG: 
       suffix: "Pt"
       label: "EG"
-      match_dR: 0.2 
       quality_id: "QUAL_125x_EGID"
       cuts:
         - "abs({eta}) < 2.8"
     tkElectron:
       suffix: "Pt"
       label: "tkElectron"
-      match_dR: 0.15
       cuts:
         - "{passeseleid} == 1"
         - "abs({eta}) < 2.8"
-  xlabel: "Online $p_T$ [GeV]"
-  ylabel: "Rate [kHz]"
   binning:  # is passed to np.logspace 
     start: 0 
     stop: 2
@@ -32,12 +28,9 @@ ElectronsTriggerBarrelV29vsV30:
     EG: 
       suffix: "Pt"
       label: "EG"
-      match_dR: 0.2 
       quality_id: "QUAL_125x_EGID"
       cuts:
         - "abs({eta}) < 2.8"
-  xlabel: "Online $p_T$ [GeV]"
-  ylabel: "Rate [kHz]"
   binning:  # is passed to np.logspace 
     start: 0 
     stop: 2
