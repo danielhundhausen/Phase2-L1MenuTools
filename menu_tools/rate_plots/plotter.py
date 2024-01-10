@@ -2,6 +2,7 @@
 import argparse
 import os
 import warnings
+import sys
 
 import awkward as ak
 import matplotlib.pyplot as plt
@@ -147,24 +148,22 @@ class RateComputer:
         self.sample = sample
         self.version = version
         self.apply_offline_conversion = apply_offline_conversion
+        if self.apply_offline_conversion:
+            self.scaling_params = self._load_scalings()
         self.arrays = self._load_cached_arrays()
 
-    def _apply_scalings(self, arr: ak.Array) -> ak.Array:
-        """
-        Apply conversion from online pt to offline pt according to linear
-        scaling function parametrized by the scalings computed by the
-        objectPerformance code.
-        If no file with scaling parameters is found, a warning is printed
-        and the online pt is left unchanged.
-        """
+    def _load_scalings(self):
         try:
             scaling_params = scalings.load_scaling_params(self.object, self.version)
-        except FileNotFoundError:
-            warnings.warn(
-                f"No file was found at `outputs/scalings/{self.version}/{self.object}.yaml`! Setting offline pt = online pt",
+        except FileNotFoundError as e:
+            warnings.warn_explicit(
+                f"No file was found at `outputs/scalings/{self.version}/{self.object}.yaml`!",
                 UserWarning,
+                filename="plotter.py",
+                lineno=159,
             )
-        return scalings.compute_offline_pt(arr, scaling_params, "pt")
+            raise UserWarning
+        return scaling_params
 
     def _load_cached_arrays(self):
         """
@@ -181,7 +180,7 @@ class RateComputer:
 
         # Apply scalings if so configured
         if self.apply_offline_conversion:
-            arr["pt"] = self._apply_scalings(arr)
+            arr["pt"] = scalings.compute_offline_pt(arr, self.scaling_params, "pt")
 
         return arr
 
@@ -267,9 +266,14 @@ class RatePlotCentral:
             for obj_name, obj_properties in plot_config.objects.items():
                 # TODO: Only iterate over object names and load object
                 # properties from somewhere else, ideally a central place.
-                rate_plot_data[obj_name] = self._compute_rates(
-                    plot_config, obj_name, obj_properties, apply_offline_conversion
-                )
+                try:
+                    rate_plot_data[obj_name] = self._compute_rates(
+                        plot_config, obj_name, obj_properties, apply_offline_conversion
+                    )
+                except UserWarning:
+                    # Return without creating a plot if a warning was raised.
+                    # This applies to no scalings being found for an object.
+                    return None
 
             # Plot Rate vs. Threshold after all data has been aggregated
             plotter = RatePlotter(plot_config, rate_plot_data, apply_offline_conversion)
