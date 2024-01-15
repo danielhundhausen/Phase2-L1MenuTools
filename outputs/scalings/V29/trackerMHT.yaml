@@ -1,6 +1,0 @@
-trackerMHT:
-  inclusive:
-    eta_max: 9999
-    eta_min: 0
-    offset: 410.9299
-    slope: 0.295772

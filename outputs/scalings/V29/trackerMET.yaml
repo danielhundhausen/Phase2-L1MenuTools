@@ -1,6 +1,0 @@
-trackerMET:
-  inclusive:
-    eta_max: 9999
-    eta_min: 0
-    offset: 417.67308
-    slope: 0.2483366
