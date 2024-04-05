@@ -1,0 +1,54 @@
+L1_PFTau_PFTau_0:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 0.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 0.0
+    obj: caloTau:default
+L1_PFTau_PFTau_1:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 30.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 30.0
+    obj: caloTau:default
+L1_PFTau_PFTau_2:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 60.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 60.0
+    obj: caloTau:default
+L1_PFTau_PFTau_3:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 90.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 90.0
+    obj: caloTau:default
+L1_PFTau_PFTau_4:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 120.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 120.0
+    obj: caloTau:default
+L1_PFTau_PFTau_5:
+  cross_masks:
+    - leg1.deltaR(leg2) > 0.5
+  leg1:
+    threshold_cut: offline_pt > 150.0
+    obj: caloTau:default
+  leg2:
+    threshold_cut: offline_pt > 150.0
+    obj: caloTau:default

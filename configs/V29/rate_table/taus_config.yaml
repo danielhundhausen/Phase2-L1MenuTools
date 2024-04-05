@@ -1,0 +1,4 @@
+version: "V29"
+sample: "MinBias"
+menu_config: "configs/V29/rate_table/tau_plot_mock_table.yml"
+table_fname: "rates_tau_plot"
