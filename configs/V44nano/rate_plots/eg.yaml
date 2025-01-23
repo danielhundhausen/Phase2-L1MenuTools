@@ -5,7 +5,6 @@ EGRates:
     - L1EG:default
     - L1tkElectron:NoIso
     - L1tkElectron:Iso
-    - L1tkPhoton:Iso
   binning:
     min: 10
     max: 97
@@ -30,8 +29,6 @@ EG_Iso_RatesByRegion:
   test_objects:
     - L1tkElectron:Iso:barrel
     - L1tkElectron:Iso:endcap
-    - L1tkPhoton:Iso:barrel
-    - L1tkPhoton:Iso:endcap
   binning:
     min: 10
     max: 97

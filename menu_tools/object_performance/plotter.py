@@ -44,7 +44,8 @@ class Plotter:
 
     def _create_new_plot(self) -> tuple[plt.Figure, plt.Axes]:
         fig, ax = plt.subplots(figsize=(10, 10))
-        hep.cms.label(ax=ax, llabel="Phase-2 Simulation", com=14)
+        # hep.cms.label(ax=ax, llabel="Phase-2 Simulation", com=14)
+        hep.cms.label(ax=ax, llabel="Private work (CMS Simulation)", exp="", com=14)
         return fig, ax
 
 
@@ -67,17 +68,19 @@ class EfficiencyPlotter(Plotter):
             "outputs", self.version, "object_performance", "distributions"
         )
 
-    def _style_plot(self, fig, ax, legend_loc="lower right", ylabel=False):
+    def _style_plot(self, fig, ax, legend_loc="lower right", ylabel=False, efficiency_type=""):
         ax.axvline(self.threshold, ls=":", c="k")
         ax.axhline(1, ls=":", c="k")
         ax.legend(loc=legend_loc, frameon=False)
         ax.set_xlabel(rf"{self.cfg.xlabel}")
         if not ylabel:
             ylabel = self.cfg.ylabel.replace("<threshold>", str(self.threshold))
+        if "turnon" in efficiency_type:
+            ylabel = ylabel.replace("Trigger", "Turn-on")
         ax.set_ylabel(rf"{ylabel}")
         ax.set_xlim(self.cfg.bin_min, self.cfg.bin_max)
         ax.tick_params(direction="in")
-        watermark = f"{self.version}_{self.plot_name}_" f"{self.threshold}"
+        watermark = "" # f"{self.version}_{self.plot_name}_" f"{self.threshold}"
         ax.text(
             0,
             -0.1,
@@ -96,7 +99,7 @@ class EfficiencyPlotter(Plotter):
         plot["watermark"] = f"{self.version}_{self.plot_name}_" f"{self.threshold}"
 
         for obj_key, gen_hist_trig in self.turnon_collection.hists.items():
-            if obj_key == "ref":
+            if "ref" in obj_key:
                 continue
             obj = Object(
                 obj_key,
@@ -156,50 +159,51 @@ class EfficiencyPlotter(Plotter):
         """
         Efficiency / turn-on plots.
         """
-        fig, ax = self._create_new_plot()
-        xbins = self.turnon_collection.bins
-        xbins = 0.5 * (xbins[1:] + xbins[:-1])
+        for efficiency_type in ["turnon", "trigger"]:
+            fig, ax = self._create_new_plot()
+            xbins = self.turnon_collection.bins
+            xbins = 0.5 * (xbins[1:] + xbins[:-1])
 
-        for obj_key, gen_hist_trig in self.turnon_collection.hists.items():
-            if obj_key == "ref":
-                continue
-            efficiency, yerr = self.turnon_collection.get_efficiency(obj_key)
+            for obj_key, _ in self.turnon_collection.hists.items():
+                if "ref" in obj_key:
+                    continue
+                efficiency, yerr = self.turnon_collection.get_efficiency(obj_key, "ref_" + efficiency_type)
 
-            obj = Object(
-                obj_key,
-                version=self.version,
+                obj = Object(
+                    obj_key,
+                    version=self.version,
+                )
+
+                err_kwargs = {
+                    # "xerr": self.turnon_collection.xerr(obj_key),
+                    "capsize": 3,
+                    "marker": "o",
+                    "markersize": 8,
+                }
+                ax.errorbar(
+                    xbins, efficiency, yerr=yerr, label=obj.plot_label, **err_kwargs
+                )
+
+            self._style_plot(fig, ax, efficiency_type=efficiency_type)
+            ax.set_ylim(0, 1.1)
+
+            # Save figure
+            plot_fname = f"{self.plot_name}_{self.threshold}_{self.version}_{efficiency_type}"
+            plt.savefig(
+                os.path.join(self._outdir_turnons, f"{plot_fname}.png"), bbox_inches="tight"
             )
-
-            err_kwargs = {
-                # "xerr": self.turnon_collection.xerr(obj_key),
-                "capsize": 3,
-                "marker": "o",
-                "markersize": 8,
-            }
-            ax.errorbar(
-                xbins, efficiency, yerr=yerr, label=obj.plot_label, **err_kwargs
+            plt.savefig(
+                os.path.join(self._outdir_turnons, f"{plot_fname}.pdf"), bbox_inches="tight"
             )
+            self._save_json(os.path.join(self._outdir_turnons, f"{plot_fname}.json"))
 
-        self._style_plot(fig, ax)
-        ax.set_ylim(0, 1.1)
+            # Save config
+            with open(os.path.join(self._outdir_turnons, f"{plot_fname}.yaml"), "w") as f:
+                yaml.dump(
+                    {self.plot_name: self.cfg.config_dict}, f, default_flow_style=False
+                )
 
-        # Save figure
-        plot_fname = f"{self.plot_name}_{self.threshold}_{self.version}"
-        plt.savefig(
-            os.path.join(self._outdir_turnons, f"{plot_fname}.png"), bbox_inches="tight"
-        )
-        plt.savefig(
-            os.path.join(self._outdir_turnons, f"{plot_fname}.pdf"), bbox_inches="tight"
-        )
-        self._save_json(os.path.join(self._outdir_turnons, f"{plot_fname}.json"))
-
-        # Save config
-        with open(os.path.join(self._outdir_turnons, f"{plot_fname}.yaml"), "w") as f:
-            yaml.dump(
-                {self.plot_name: self.cfg.config_dict}, f, default_flow_style=False
-            )
-
-        plt.close()
+            plt.close()
 
     @utils.ignore_warnings
     def _plot_iso_vs_efficiency_curve(self):
@@ -211,7 +215,7 @@ class EfficiencyPlotter(Plotter):
         xbins = 0.5 * (xbins[1:] + xbins[:-1])
 
         for obj_key, gen_hist_trig in self.turnon_collection.hists.items():
-            if obj_key == "ref":
+            if "ref" in obj_key:
                 continue
             iso_vs_eff_hist = self._get_iso_vs_eff_hist(gen_hist_trig[0])
 
@@ -242,16 +246,16 @@ class EfficiencyPlotter(Plotter):
 
         plt.close()
 
-    def _plot_raw_counts(self):
+    def _plot_raw_counts(self, ref_key):
         """
         Raw counts of objects in bins
         of the efficiency plots.
         """
         fig, ax = self._create_new_plot()
-        xbins = self.turnon_collection.bins
-        xbins = 0.5 * (xbins[1:] + xbins[:-1])
+        bins = self.turnon_collection.bins
+        xbins = 0.5 * (bins[1:] + bins[:-1])
 
-        for obj_key, ref_hist in self.turnon_collection.hists["ref"].items():
+        for obj_key, ref_hist in self.turnon_collection.hists[ref_key].items():
             err_kwargs = {
                 "xerr": self.turnon_collection.xerr(obj_key),
                 "capsize": 1,
@@ -278,7 +282,7 @@ class EfficiencyPlotter(Plotter):
         plt.gca().set_prop_cycle(None)
 
         for obj_key, gen_hist_trig in self.turnon_collection.hists.items():
-            if obj_key == "ref":
+            if "ref" in obj_key:
                 continue
             yerr = np.sqrt(gen_hist_trig[0])
             label = obj_key
@@ -295,6 +299,7 @@ class EfficiencyPlotter(Plotter):
         ylabel = self.cfg.ylabel.replace("<threshold>", str(self.threshold))
         ylabel = ylabel.replace("Trigger Efficiency", "Events")
         self._style_plot(fig, ax, legend_loc="best", ylabel=ylabel)
+        ax.set_xlim(bins[0], 1.14 * bins[-1])
         # Save figure
         plot_fname = f"{self.plot_name}_{self.threshold}_dist_{self.version}"
         plt.savefig(os.path.join(self._outdir_distributions, f"{plot_fname}.png"))
@@ -311,7 +316,7 @@ class EfficiencyPlotter(Plotter):
             self._plot_iso_vs_efficiency_curve()
         else:
             self._plot_efficiency_curve()
-            self._plot_raw_counts()
+            self._plot_raw_counts(ref_key="ref_turnon")
 
 
 class EfficiencyCentral:
@@ -418,9 +423,9 @@ class ScalingPlotter(Plotter):
             _ylim_upper = max(_ylim_upper, np.max(y_points) * 1.1)
 
         ax.legend(loc="lower right")
-        ax.set_xlabel("L1 threshold [GeV]")
-        ax.set_ylabel(f"{int(self.scaling_pct * 100)}% Location (gen, GeV)")
-        watermark = f"{self.version}_{self.plot_name}"
+        ax.set_xlabel("L1 threshold (GeV)")
+        ax.set_ylabel(f"{int(self.scaling_pct * 100)}% Location (GeV)")
+        watermark = ""  # f"{self.version}_{self.plot_name}"
         ax.text(
             0,
             -0.1,

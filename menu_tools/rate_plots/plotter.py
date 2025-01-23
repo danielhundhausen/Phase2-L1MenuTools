@@ -56,11 +56,11 @@ class RatePlotter:
 
     def _style_plot(self, fig, ax0, ax1=None, legend_loc="upper right"):
         ax0.legend(loc=legend_loc, frameon=False)
-        ax0.set_ylabel("Rate [kHz]")
+        ax0.set_ylabel("Rate (kHz)")
         ax0.set_yscale("log")
         ax0.grid()
         ax0.tick_params(direction="in")
-        xlabel = rf"{self._online_offline} $p_T$ [GeV]"
+        xlabel = rf"{self._online_offline} $p_T$ (GeV)"
 
         if ax1:
             ax1.set_xlabel(xlabel)
@@ -75,7 +75,7 @@ class RatePlotter:
         """
         version = self.cfg.version
         fig, ax = plt.subplots(figsize=self._figsize)
-        hep.cms.label(ax=ax, llabel=self._llabel, com=self._com)
+        hep.cms.label(ax=ax, exp="", llabel="Private work (CMS Simulation)", com=self._com)
 
         plot_dict = {}
 
@@ -87,7 +87,7 @@ class RatePlotter:
             xvals = list(rate_values.keys())
             yvals = list(rate_values.values())
             label = f"{obj_instances[version].plot_label}"
-            xlabel = rf"{self._online_offline} $p_T$ [GeV]"
+            xlabel = rf"{self._online_offline} $p_T$ (GeV)"
 
             obj_spec_split = obj_specifier.split(":")
             if len(obj_spec_split) == 3:
@@ -138,7 +138,7 @@ class RatePlotter:
             sharex=True,
             gridspec_kw={"height_ratios": [3, 1]},
         )
-        hep.cms.label(ax=axs[0], llabel=self._llabel, com=self._com)
+        hep.cms.label(ax=axs[0], exp="", llabel="Private work (CMS Simulation)", com=self._com)
 
         for obj_key, rate_values in self.data.items():
             xvalues = np.fromiter(rate_values[v1].keys(), dtype=float)

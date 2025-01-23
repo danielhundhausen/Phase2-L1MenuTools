@@ -69,7 +69,7 @@ class ArrayLoader:
         ref_array = self._load_array_from_parquet(
             self.cfg_plot.reference_object.nano_obj_name
         )
-        self.turnon_collection.ak_arrays["ref"] = ref_array
+        self.turnon_collection.ak_arrays["ref_turnon"] = ref_array
 
     def _load_test_branches(self) -> None:
         """
@@ -95,8 +95,8 @@ class TurnOnCollection:
         self.version = self.cfg_plot.version
         self.threshold = threshold
         self.ak_arrays: dict[str, Any] = {}
-        self.numerators: dict[str, Any] = {"ref": {}, "test": {}}
-        self.hists: dict[str, Any] = {"ref": {}}
+        self.numerators: dict[str, Any] = {"ref_turnon": {}, "test": {}}
+        self.hists: dict[str, Any] = {"ref_turnon": {}, "ref_trigger": {}}
 
     @property
     def test_objects(self) -> list[tuple[Object, str]]:
@@ -143,7 +143,7 @@ class TurnOnCollection:
         """
         for test_obj, x_arg in self.test_objects:
             ref_test = ak.cartesian(
-                {"ref": self.ak_arrays["ref"], "test": self.ak_arrays[str(test_obj)]},
+                {"ref_turnon": self.ak_arrays["ref_turnon"], "test": self.ak_arrays[str(test_obj)]},
                 nested=True,
             )
             js, gs = ak.unzip(ref_test)
@@ -152,7 +152,7 @@ class TurnOnCollection:
             pass_dR = dR < test_obj.match_dR
             pt_max = ak.argmax(ref_test["test"]["pt"][pass_dR], axis=-1, keepdims=True)
             if "iso" not in x_arg.lower():
-                self.numerators["ref"][str(test_obj)] = ref_test["ref"][x_arg][pass_dR][
+                self.numerators["ref_turnon"][str(test_obj)] = ref_test["ref_turnon"][x_arg][pass_dR][
                     pt_max
                 ][:, :, 0]
             self.numerators["test"][str(test_obj)] = ref_test["test"][x_arg][pass_dR][
@@ -181,8 +181,8 @@ class TurnOnCollection:
         this function already has cuts applied in `apply_reference_cuts`.
         `_mht` is an `ak.Array()` with one entry (MHT) per event.
         """
-        _px = self.ak_arrays["ref"].px
-        _py = self.ak_arrays["ref"].py
+        _px = self.ak_arrays["ref_turnon"].px
+        _py = self.ak_arrays["ref_turnon"].py
         _mht = np.sqrt(
             ak.sum(_px[:, :], axis=-1, keepdims=True) ** 2
             + ak.sum(_py[:, :], axis=-1, keepdims=True) ** 2
@@ -214,10 +214,10 @@ class TurnOnCollection:
             return
 
         if trafo == "HT":
-            self.ak_arrays["ref"]["HT"] = ak.sum(self.ak_arrays["ref"]["pt"], axis=-1)
+            self.ak_arrays["ref_turnon"]["HT"] = ak.sum(self.ak_arrays["ref_turnon"]["pt"], axis=-1)
         elif trafo == "MHT":
             gen_mht = self._compute_MHT()
-            self.ak_arrays["ref"]["MHT"] = gen_mht
+            self.ak_arrays["ref_turnon"]["MHT"] = gen_mht
         else:
             self._reduce_to_per_event()
 
@@ -228,8 +228,8 @@ class TurnOnCollection:
         highest object in pt and should be called after all the
         reference cuts are applied.
         """
-        sel_pt = ak.argmax(self.ak_arrays["ref"]["pt"], axis=-1, keepdims=True)
-        self.ak_arrays["ref"] = self.ak_arrays["ref"][sel_pt]
+        sel_pt = ak.argmax(self.ak_arrays["ref_turnon"]["pt"], axis=-1, keepdims=True)
+        self.ak_arrays["ref_turnon"] = self.ak_arrays["ref_turnon"][sel_pt]
 
     def _apply_reference_cuts(self) -> None:
         """Applies configured cuts on reference objects.
@@ -245,9 +245,9 @@ class TurnOnCollection:
         # retaining the events.
         if self.cfg_plot.reference_object.cuts:
             sel = compute_selection_mask_for_object_cuts(
-                self.cfg_plot.reference_object, self.ak_arrays["ref"]
+                self.cfg_plot.reference_object, self.ak_arrays["ref_turnon"]
             )
-            self.ak_arrays["ref"] = self.ak_arrays["ref"][sel]
+            self.ak_arrays["ref_turnon"] = self.ak_arrays["ref_turnon"][sel]
 
         # If specified, apply transformation
         if self.cfg_plot.reference_object.trafo:
@@ -257,9 +257,9 @@ class TurnOnCollection:
         # Select highest pt object from each event and apply event level cuts.
         self._select_highest_pt_ref_object()
         sel = compute_selection_mask_for_event_cuts(
-            self.cfg_plot.reference_object, self.ak_arrays["ref"]
+            self.cfg_plot.reference_object, self.ak_arrays["ref_turnon"]
         )
-        self.ak_arrays["ref"] = self.ak_arrays["ref"][sel]
+        self.ak_arrays["ref_turnon"] = self.ak_arrays["ref_turnon"][sel]
 
     def _apply_test_obj_cuts(self):
         """Applies configured cuts on all configured test objects.
@@ -284,13 +284,13 @@ class TurnOnCollection:
 
         for test_obj, x_arg in self.test_objects:
             sel = self.ak_arrays[str(test_obj)][x_arg] > self.threshold
-            if (self.ak_arrays["ref"].ndim == 1) and (sel.ndim == 2):
+            if (self.ak_arrays["ref_turnon"].ndim == 1) and (sel.ndim == 2):
                 sel = sel[:, 0]
-            ak_array = self._flatten_array(self.ak_arrays["ref"][ref_field][sel])
+            ak_array = self._flatten_array(self.ak_arrays["ref_turnon"][ref_field][sel])
             self.hists[str(test_obj)] = np.histogram(ak_array, bins=self.bins)
 
-            self.hists["ref"][str(test_obj)] = np.histogram(
-                self._flatten_array(self.ak_arrays["ref"][ref_field]), bins=self.bins
+            self.hists["ref_turnon"][str(test_obj)] = np.histogram(
+                self._flatten_array(self.ak_arrays["ref_turnon"][ref_field]), bins=self.bins
             )
 
     def _remove_inner_nones_zeros(self, arr):
@@ -302,23 +302,25 @@ class TurnOnCollection:
     def _skim_to_hists_dR_matched(self):
         ref_field = self.cfg_plot.reference_field
 
-        ref_obj = self._remove_inner_nones_zeros(self.ak_arrays["ref"][ref_field])
-
         for test_obj, _ in self.test_objects:
+            ref_obj = self._remove_inner_nones_zeros(self.ak_arrays["ref_turnon"][ref_field])
             sel_threshold = self.numerators["test"][str(test_obj)] >= self.threshold
-            numerator = self.numerators["ref"][str(test_obj)][sel_threshold]
+            numerator = self.numerators["ref_turnon"][str(test_obj)][sel_threshold]
             numerator = self._remove_inner_nones_zeros(numerator)
             numerator = self._flatten_array(numerator, ak_to_np=True)
 
             # Create Test Object(s) Numpy Histogram
             self.hists[str(test_obj)] = np.histogram(numerator, bins=self.bins)
 
-            # Create Reference Numpy Histogram
+            # Create Reference Numpy Histogram: Trigger
+            ref_flat_np = self._flatten_array(ref_obj, ak_to_np=True)
+            self.hists["ref_trigger"][str(test_obj)] = np.histogram(ref_flat_np, bins=self.bins)
+            # Create Reference Numpy Histogram: Turn-On
             if self.threshold >= 0:
-                ref_obj = self.numerators["ref"][str(test_obj)]
+                ref_obj = self.numerators["ref_turnon"][str(test_obj)]
                 ref_obj = self._remove_inner_nones_zeros(ref_obj)
             ref_flat_np = self._flatten_array(ref_obj, ak_to_np=True)
-            self.hists["ref"][str(test_obj)] = np.histogram(ref_flat_np, bins=self.bins)
+            self.hists["ref_turnon"][str(test_obj)] = np.histogram(ref_flat_np, bins=self.bins)
 
     def _skim_to_hists_dR_matched_Iso(self):
         for test_obj, _ in self.test_objects:
@@ -330,13 +332,13 @@ class TurnOnCollection:
             self.hists[str(test_obj)] = np.histogram(numerator, bins=self.bins)
 
     def xerr(self, obj: Object):
-        ref_vals = self.hists["ref"][str(obj)][0]
+        ref_vals = self.hists["ref_turnon"][str(obj)][0]
         bin_width = self.cfg_plot.bin_width
         return np.ones_like(ref_vals) * bin_width / 2
 
     @utils.ignore_warnings
-    def get_efficiency(self, obj: Object):
-        ref_vals = self.hists["ref"][str(obj)][0]
+    def get_efficiency(self, obj: Object, efficiency_type="ref_turnon"):
+        ref_vals = self.hists[efficiency_type][str(obj)][0]
         test_vals = self.hists[str(obj)][0]
 
         eff = test_vals / ref_vals
